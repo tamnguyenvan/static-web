@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simple Video Recorder</title>
+</head>
+<body>
+    <h1>Simple Video Recorder</h1>
+    <video id="video" width="640" height="480" autoplay></video>
+    <button id="startRecording">Start Recording</button>
+    <button id="stopRecording" disabled>Stop Recording</button>
+    
+        <label for="outputFormat">Select Output Format:</label>
+    <select id="outputFormat">
+        <option value="video/webm">WebM</option>
+        <option value="video/mp4">MP4</option>
+    </select>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const videoElement = document.getElementById('video');
+            const startRecordingButton = document.getElementById('startRecording');
+            const stopRecordingButton = document.getElementById('stopRecording');
+            const outputFormatSelect = document.getElementById('outputFormat');
+
+            let mediaRecorder;
+            let recordedChunks = [];
+
+            const handleSuccess = (stream) => {
+                videoElement.srcObject = stream;
+                mediaRecorder = new MediaRecorder(stream);
+
+                mediaRecorder.ondataavailable = (event) => {
+                    if (event.data.size > 0) {
+                        recordedChunks.push(event.data);
+                    }
+                };
+                
+                const mimeType = outputFormatSelect.value
+                
+                const options = {
+                    mimeType: mimeType,
+                };
+                
+
+                mediaRecorder.onstop = () => {
+                    const blob = new Blob(recordedChunks, { type: mediaRecorder.mimeType });
+                    recordedChunks = [];
+                    console.log(navigator.userAgent)
+
+                    if (mimeType === 'video/mp4') {
+                        // Safari supports MP4
+                        const url = URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = 'recording.mp4';
+                        a.click();
+                        URL.revokeObjectURL(url);
+                    } else {
+                        // Other browsers, like Chrome, support WebM
+                        const url = window.URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = 'recording.webm';
+                        a.click();
+                        window.URL.revokeObjectURL(url);
+                    }
+                };
+
+                startRecordingButton.addEventListener('click', () => {
+                    mediaRecorder.start();
+                    startRecordingButton.disabled = true;
+                    stopRecordingButton.disabled = false;
+                });
+
+                stopRecordingButton.addEventListener('click', () => {
+                    mediaRecorder.stop();
+                    startRecordingButton.disabled = false;
+                    stopRecordingButton.disabled = true;
+                });
+            };
+
+            navigator.mediaDevices.getUserMedia({ video: true })
+                .then(handleSuccess)
+                .catch(error => console.error('Error accessing webcam:', error));
+        });
+    </script>
+</body>
+</html>
+
